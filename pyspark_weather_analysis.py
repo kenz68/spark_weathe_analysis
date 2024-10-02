@@ -51,14 +51,13 @@ def main():
                     "waddington",
                     "wickairport",
                     "yeovilton"]
-    station_list = ["aberporth"]
     start_time = timeit.default_timer()
 
     # read data for each station and append to list
     for station in station_list:
         url = f"https://www.metoffice.gov.uk/pub/data/weather/uk/climate/stationdata/{station}data.txt"
         sc.addFile(url)
-        rdd = sc.textFile(SparkFiles.get(f"{station}data.txt"))
+        rdd = sc.textFile("file://" + SparkFiles.get(f"{station}data.txt"))
         df = read_data(rdd, station)
         station_count.append(df.count())
         df_all.append(df)
@@ -86,7 +85,7 @@ def read_data(rdd, station):
     :return:
     """
     # list of df column name
-    new_colnames = ["station", "year", "month", "tmax", "tmin", "af", "rain", "sum"]
+    new_colnames = ["station", "year", "month", "tmax", "tmin", "af", "rain", "sun"]
 
     # finc the index for the end of header and filter out header & special character
     head_index = rdd.zipWithIndex().lookup("              degC    degC    days      mm   hours")
@@ -110,7 +109,7 @@ def read_data(rdd, station):
     df1 = df.select([df.station] + [df.data[i] for i in range(7)])
     df2 = df1.toDF(*new_colnames) \
         .replace("___", None) \
-        .na.fill({"tmax": 0.0, "tmin": 0.0, "af": 0.0, "rain": 0.0, "sum": 0.0}) \
+        .na.fill({"tmax": 0.0, "tmin": 0.0, "af": 0.0, "rain": 0.0, "sun": 0.0}) \
         .withColumn("year", col("year").cast("integer")) \
         .withColumn("month", col("month").cast("integer")) \
         .withColumn("tmax", col("tmax").cast("float")) \
